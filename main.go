@@ -30,7 +30,7 @@ var (
 func init() {
 	flag.StringVar(&file, "f", "", "sets the path to the text file to parsed")
 	flag.BoolVar(&write, "w", false, "sets the path to the text file to parsed")
-	flag.StringVar(&outputFile, "o", "samples/out.csv", "sets the path to the text file to parsed")
+	flag.StringVar(&outputFile, "o", "samples/out.csv", "sets the path to the output csv file")
 }
 
 func validate() {
@@ -100,19 +100,18 @@ func csvWriter(input []row) error {
 			[]string{input[i].date, input[i].description, fmt.Sprintf("%.2f", input[i].value)},
 		)
 	}
-	f, err := os.Create("out.csv")
+	f, err := os.Create(outputFile)
 	if err != nil {
 		return errors.Wrap(err, "os.Create output file")
 	}
 	defer f.Close()
 
 	w := csv.NewWriter(f)
-	defer w.Flush()
 
-	for _, r := range records {
-		if err := w.Write(r); err != nil {
-			return errors.Wrap(err, "w.Write")
-		}
+	err = w.WriteAll(records)
+	if err != nil {
+		return errors.Wrap(err, "w.WriteAll records")
 	}
+
 	return nil
 }
