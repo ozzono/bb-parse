@@ -5,7 +5,6 @@ import (
 	"encoding/csv"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -22,12 +21,6 @@ type row struct {
 }
 
 var (
-	samples = []string{
-		"16.05.2023PG JUSBRASIL            557130352528 BR               84,00        0,00",
-		"04.04.2023MercPag TEARMANUAL     OSASCO        BR              212,80        0,00",
-		"17.04.2023MEDMANIPULADBUENOS AY   551199390353 BR              367,80        0,00",
-		"13.04.2023IKESAKI Ikesaki Cosme  SAO PAULO     BR              -27,69        0,00",
-	}
 	datePattern = `\d{2}\.\d{2}\.\d{4}`
 	file        string
 	write       bool
@@ -62,16 +55,15 @@ func main() {
 }
 
 func readFile() (string, error) {
-	f, err := ioutil.ReadFile(file)
+	f, err := os.ReadFile(file)
 	if err != nil {
-		return "", errors.Wrap(err, "ioutil.ReadFile -f file")
+		return "", errors.Wrap(err, "os.ReadFile -f file")
 	}
 	return string(f), nil
 }
 
 func parseFile(input string) []row {
 	rows := []row{}
-	i := 0
 	for _, v := range strings.Split(input, "\n") {
 		// fmt.Println(v[49:69])
 		v = strings.TrimSuffix(v, "\r")
@@ -84,12 +76,6 @@ func parseFile(input string) []row {
 		}
 		if match {
 			rows = append(rows, parseRow(v))
-			i++
-			fmt.Println(v)
-		}
-
-		if i == 10 {
-			break
 		}
 	}
 	return rows
@@ -99,7 +85,7 @@ func parseRow(input string) row {
 	out := row{}
 	splittedDate := strings.Split(input[:10], ".")
 	out.date = strings.Join([]string{splittedDate[2], splittedDate[1], splittedDate[0]}, "-")
-	out.description = utils.TrimSpaces(input[10:47])
+	out.description = strings.ToLower(utils.TrimSpaces(input[10:47]))
 	v, _ := strconv.ParseFloat(strings.ReplaceAll(utils.TrimSpaces(input[49:69]), ",", "."), 64)
 	out.value = v
 	return out
