@@ -1,13 +1,13 @@
 package main
 
 import (
+	"bb-parse/internal/db"
 	"bb-parse/internal/models"
 	"bb-parse/utils"
 	"flag"
 	"log"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
@@ -51,7 +51,11 @@ func main() {
 		log.Println(errors.Wrap(err, "readFile"))
 		return
 	}
-	rows := parseFile(f)
+	rows, err := parseFile(f)
+	if err != nil {
+		log.Println(errors.Wrap(err, "parseFile"))
+		return
+	}
 	err = utils.CSVWriter(rows, outputFile)
 	if err != nil {
 		log.Println(errors.Wrap(err, "utils.CSVWriter"))
@@ -66,8 +70,12 @@ func readFile() (string, error) {
 	return string(f), nil
 }
 
-func parseFile(input string) []*models.Record {
+func parseFile(input string) ([]*models.Record, error) {
 	rows := []*models.Record{}
+	c, err := db.NewDB()
+	if err != nil {
+		return nil, errors.Wrap(err, "db.NewDB")
+	}
 	for _, v := range strings.Split(input, "\n") {
 		// fmt.Println(v[49:69])
 		v = strings.TrimSuffix(v, "\r")
@@ -79,18 +87,12 @@ func parseFile(input string) []*models.Record {
 			continue
 		}
 		if match {
-			rows = append(rows, parseRow(v))
+			r, err := c.ParseAndCompare(v)
+			if err != nil {
+				return nil, errors.Wrap(err, "c.ParseAndCompare")
+			}
+			rows = append(rows, r)
 		}
 	}
-	return rows
-}
-
-func parseRow(input string) *models.Record {
-	out := &models.Record{}
-	splittedDate := strings.Split(input[:10], ".")
-	out.Date = strings.Join([]string{splittedDate[2], splittedDate[1], splittedDate[0]}, "-")
-	out.Description = strings.ToLower(utils.TrimSpaces(input[10:47]))
-	v, _ := strconv.ParseFloat(strings.ReplaceAll(utils.TrimSpaces(input[49:69]), ",", "."), 64)
-	out.Value = v
-	return out
+	return rows, nil
 }

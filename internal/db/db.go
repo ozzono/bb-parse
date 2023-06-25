@@ -2,7 +2,10 @@ package db
 
 import (
 	"bb-parse/internal/models"
+	"bb-parse/utils"
 	"log"
+	"strconv"
+	"strings"
 
 	"github.com/pkg/errors"
 	"gorm.io/driver/sqlite" // Sqlite driver based on CGO
@@ -34,6 +37,15 @@ func (c *Client) AddRecords(r []*models.Record) error {
 	return nil
 }
 
+func (c *Client) GetRecordByDesc(desc string) (*models.Record, error) {
+	out := &models.Record{}
+	tx := c.DB.First(out, "description = ?", desc)
+	if tx.Error != nil {
+		return nil, errors.Wrapf(tx.Error, "c.DB.First description = %s", desc)
+	}
+	return out, nil
+}
+
 func (c *Client) GetRecords() ([]*models.Record, error) {
 	out := []*models.Record{}
 	tx := c.DB.Find(&out)
@@ -54,4 +66,23 @@ func (c *Client) DelRecord(r *models.Record) error {
 	}
 	log.Printf("affected rows: %d", tx.RowsAffected)
 	return nil
+}
+
+func (c *Client) ParseAndCompare(input string) (*models.Record, error) {
+	out := &models.Record{}
+	splittedDate := strings.Split(input[:10], ".")
+	out.Date = strings.Join([]string{splittedDate[2], splittedDate[1], splittedDate[0]}, "-")
+	out.Description = strings.ToLower(utils.TrimSpaces(input[10:47]))
+	v, _ := strconv.ParseFloat(strings.ReplaceAll(utils.TrimSpaces(input[49:69]), ",", "."), 64)
+	out.Value = v
+
+	dbRecord, err := c.GetRecordByDesc(out.Description)
+	if errors.Is(err, gorm.ErrRecordNotFound) {
+		return out, nil
+	}
+	if err != nil {
+		return nil, errors.Wrapf(err, "c.GetRecordByDesc %s", out.Description)
+	}
+	out.Category = dbRecord.Category
+	return out, nil
 }

@@ -51,6 +51,6 @@ func (dbs dbSuite) Test3Del() {
 	err := dbs.c.DelRecord(record)
 	dbs.Require().NoError(err)
 
-	_, err = dbs.c.GetRecords()
-	dbs.Require().Equal(true, errors.Is(err, gorm.ErrRecordNotFound))
+	_, err = dbs.c.GetRecordByDesc(record.Description)
+	dbs.Require().True(errors.Is(err, gorm.ErrRecordNotFound))
 }
