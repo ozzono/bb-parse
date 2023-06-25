@@ -1,2 +1,4 @@
 samples/*
 *.csv
+.env
+gorm.db

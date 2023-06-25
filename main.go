@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 )
 
@@ -28,6 +29,7 @@ var (
 )
 
 func init() {
+	godotenv.Load(".env")
 	flag.StringVar(&file, "f", "", "sets the path to the text file to parsed")
 	flag.BoolVar(&write, "w", false, "sets the path to the text file to parsed")
 	flag.StringVar(&outputFile, "o", "samples/out.csv", "sets the path to the output csv file")
