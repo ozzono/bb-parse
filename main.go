@@ -1,10 +1,9 @@
 package main
 
 import (
+	"bb-parse/internal/models"
 	"bb-parse/utils"
-	"encoding/csv"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -53,7 +52,10 @@ func main() {
 		return
 	}
 	rows := parseFile(f)
-	csvWriter(rows)
+	err = utils.CSVWriter(rows, outputFile)
+	if err != nil {
+		log.Println(errors.Wrap(err, "utils.CSVWriter"))
+	}
 }
 
 func readFile() (string, error) {
@@ -64,8 +66,8 @@ func readFile() (string, error) {
 	return string(f), nil
 }
 
-func parseFile(input string) []row {
-	rows := []row{}
+func parseFile(input string) []*models.Record {
+	rows := []*models.Record{}
 	for _, v := range strings.Split(input, "\n") {
 		// fmt.Println(v[49:69])
 		v = strings.TrimSuffix(v, "\r")
@@ -83,37 +85,12 @@ func parseFile(input string) []row {
 	return rows
 }
 
-func parseRow(input string) row {
-	out := row{}
+func parseRow(input string) *models.Record {
+	out := &models.Record{}
 	splittedDate := strings.Split(input[:10], ".")
-	out.date = strings.Join([]string{splittedDate[2], splittedDate[1], splittedDate[0]}, "-")
-	out.description = strings.ToLower(utils.TrimSpaces(input[10:47]))
+	out.Date = strings.Join([]string{splittedDate[2], splittedDate[1], splittedDate[0]}, "-")
+	out.Description = strings.ToLower(utils.TrimSpaces(input[10:47]))
 	v, _ := strconv.ParseFloat(strings.ReplaceAll(utils.TrimSpaces(input[49:69]), ",", "."), 64)
-	out.value = v
+	out.Value = v
 	return out
-}
-
-func csvWriter(input []row) error {
-	records := [][]string{
-		{"date", "description", "value"},
-	}
-	for i := range input {
-		records = append(records,
-			[]string{input[i].date, input[i].description, fmt.Sprintf("%.2f", input[i].value)},
-		)
-	}
-	f, err := os.Create(outputFile)
-	if err != nil {
-		return errors.Wrap(err, "os.Create output file")
-	}
-	defer f.Close()
-
-	w := csv.NewWriter(f)
-
-	err = w.WriteAll(records)
-	if err != nil {
-		return errors.Wrap(err, "w.WriteAll records")
-	}
-
-	return nil
 }
